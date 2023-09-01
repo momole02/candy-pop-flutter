@@ -1,20 +1,27 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:candy_pop_flutter/game/constants.dart';
+import 'package:candy_pop_flutter/gameplay/action_pattern.dart';
+import 'package:candy_pop_flutter/gameplay/actions/move_pieces_action.dart';
+import 'package:candy_pop_flutter/state/constants.dart';
 import 'package:candy_pop_flutter/sprites/background_spr.dart';
 import 'package:candy_pop_flutter/sprites/piece_spr.dart';
+import 'package:candy_pop_flutter/state/game_state.dart';
+import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 
 /// Classe de base du jeu
 ///
-class CandyGame extends FlameGame {
+class CandyGame extends FlameGame with TapCallbacks {
   late BackgroundSprite backgroundSprite;
   late List<Aabb2> pieceSlots;
   late List<PieceSprite> pieces;
+  late ActionManager actionManager;
+  late GameState state;
 
   CandyGame() {
     backgroundSprite = BackgroundSprite();
+    actionManager = ActionManager();
   }
 
   Aabb2 _computeSlotAabb(int index) {
@@ -43,6 +50,40 @@ class CandyGame extends FlameGame {
     );
   }
 
+  void _computeGameState() {
+    state = GameState.computeFromSprites(
+      aabbs: pieceSlots,
+      sprites: pieces,
+    );
+  }
+
+  void _play(double x, double y) {
+    double pieceSize = size.x / kPieceCountWidth;
+    int i = (x / pieceSize).floor();
+    int j = (y / pieceSize).floor();
+    FloodFillContext floodFillContext = FloodFillContext(state);
+    List<PieceSprite> spritesToDrop = floodFillContext.compute(i, j);
+    if (spritesToDrop.length >= 3) {
+      actionManager.push(MovePiecesAction(
+          pieces: spritesToDrop,
+          durationMs: 600,
+          position: Vector2(0, size.y - pieceSize)));
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    actionManager.performStuff();
+  }
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    if (!actionManager.isRunning()) {
+      _play(event.localPosition.x, event.localPosition.y);
+    }
+  }
+
   @override
   FutureOr<void> onLoad() {
     pieceSlots =
@@ -51,5 +92,6 @@ class CandyGame extends FlameGame {
         kPieceCountWidth * kPieceCountHeight, _computePieceSprite);
     add(backgroundSprite);
     addAll(pieces);
+    _computeGameState();
   }
 }

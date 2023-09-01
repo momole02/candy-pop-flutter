@@ -1,15 +1,7 @@
 import 'dart:async';
 
+import 'package:candy_pop_flutter/state/game_state.dart';
 import 'package:flame/components.dart';
-
-/// Types de piece
-enum PieceType {
-  clover,
-  heart,
-  moon,
-  star,
-  water,
-}
 
 /// Sprite associé à une pièce
 class PieceSprite extends SpriteComponent {
